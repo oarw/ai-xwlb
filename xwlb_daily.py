@@ -96,9 +96,40 @@ def summarize_with_gemini(content):
         logger.error(f"生成摘要失败: {str(e)}")
         raise
 
+def get_notion_database_properties():
+    """获取Notion数据库的属性结构"""
+    try:
+        notion = Client(auth=NOTION_API_KEY)
+        database = notion.databases.retrieve(database_id=NOTION_DATABASE_ID)
+        logger.info(f"Notion数据库属性: {database['properties'].keys()}")
+        return database['properties']
+    except Exception as e:
+        logger.error(f"获取Notion数据库属性失败: {str(e)}")
+        return None
+
 def save_to_notion(title, content, summary):
     """将原文和总结保存到Notion"""
     notion = Client(auth=NOTION_API_KEY)
+    
+    # 获取数据库属性
+    db_properties = get_notion_database_properties()
+    if not db_properties:
+        logger.error("无法获取Notion数据库属性，保存失败")
+        return None
+        
+    # 找到标题和日期属性的正确名称
+    title_property_name = None
+    date_property_name = None
+    
+    for name, prop in db_properties.items():
+        if prop['type'] == 'title':
+            title_property_name = name
+        elif prop['type'] == 'date':
+            date_property_name = name
+    
+    if not title_property_name or not date_property_name:
+        logger.error(f"未找到所需属性，标题属性: {title_property_name}, 日期属性: {date_property_name}")
+        return None
     
     # 将长内容分割成较小的块
     def chunk_text(text, max_length=2000):
@@ -147,26 +178,19 @@ def save_to_notion(title, content, summary):
             }
         })
     
+    properties = {}
+    properties[title_property_name] = {
+        "title": [{"text": {"content": title}}]
+    }
+    properties[date_property_name] = {
+        "date": {"start": datetime.datetime.now().strftime("%Y-%m-%d")}
+    }
+    
     try:
         logger.info(f"正在保存到Notion: {title}")
         page = notion.pages.create(
             parent={"database_id": NOTION_DATABASE_ID},
-            properties={
-                "标题": {
-                    "title": [
-                        {
-                            "text": {
-                                "content": title
-                            }
-                        }
-                    ]
-                },
-                "日期": {
-                    "date": {
-                        "start": datetime.datetime.now().strftime("%Y-%m-%d")
-                    }
-                }
-            },
+            properties=properties,
             children=children
         )
         return page["id"]
