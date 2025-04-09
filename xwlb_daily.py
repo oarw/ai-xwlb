@@ -195,7 +195,7 @@ def send_email(title, summary):
     try:
         logger.info(f"正在发送邮件到: {RECIPIENT_EMAIL}")
         # 根据您的邮件服务商调整SMTP设置
-        server = smtplib.SMTP('smtp.gmail.com', 587)  # 以Gmail为例
+        server = smtplib.SMTP('smtp.mailersend.net', 587)  # 以Gmail为例
         server.starttls()
         server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         text = msg.as_string()
