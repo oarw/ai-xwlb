@@ -96,6 +96,47 @@ def summarize_with_gemini(content):
         logger.error(f"生成摘要失败: {str(e)}")
         raise
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def generate_html_notes(content, title):
+    """使用Google Gemini API生成HTML格式的笔记"""
+    prompt = f"""
+    请将以下新闻联播内容转换为学习笔记形式，重点关注与考研和考公考试相关的内容。
+
+    请生成HTML格式的笔记，包含以下部分：
+    1. 标题部分：大标题样式的"{title}"
+    2. 整体摘要部分：简洁概括新闻重点（约200字）
+    3. 关键新闻点部分：使用编号列表呈现主要新闻内容
+    4. 考研考公重要信息部分：使用醒目的样式标注与国家政策、经济发展、社会治理、重大事件、国际关系等相关内容
+    5. 可能考点部分：分析此次新闻内容可能出现的考点，使用表格形式展示
+
+    使用适当的HTML标签和CSS样式使内容美观易读，包括但不限于：
+    - 使用不同颜色标注不同重要程度的内容
+    - 使用合理的字体大小和间距
+    - 添加适当的分割线或其他视觉元素
+    
+    新闻内容:
+    {content}
+    """
+    
+    try:
+        logger.info("正在使用Google Gemini生成HTML笔记")
+        # 配置Gemini API
+        genai.configure(api_key=GEMINI_API_KEY)
+        # 创建模型
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        # 生成回复
+        response = model.generate_content(prompt)
+        # 返回文本内容
+        return response.text
+    except Exception as e:
+        logger.error(f"生成HTML笔记失败: {str(e)}")
+        # 如果失败，返回简单的HTML格式
+        return f"""
+        <h1>{title}</h1>
+        <p>抱歉，无法生成结构化笔记，请查看以下摘要：</p>
+        <pre>{content[:500]}...</pre>
+        """
+
 def get_notion_database_properties():
     """获取Notion数据库的属性结构"""
     try:
@@ -198,15 +239,93 @@ def save_to_notion(title, content, summary):
         logger.error(f"保存到Notion失败: {str(e)}")
         return None
 
-def send_email(title, summary):
-    """发送摘要邮件"""
-    msg = MIMEMultipart()
+def send_email(title, summary, content=None):
+    """发送HTML格式的笔记摘要邮件"""
+    msg = MIMEMultipart('alternative')
     msg['From'] = EMAIL_ADDRESS
     msg['To'] = RECIPIENT_EMAIL
-    msg['Subject'] = f"【新闻联播摘要】{title}"
+    msg['Subject'] = f"【新闻联播学习笔记】{title}"
     
-    body = f"""
-    {title} 摘要：
+    # 先生成HTML格式笔记
+    html_notes = generate_html_notes(content or summary, title)
+    
+    # 添加CSS样式的基础HTML
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{title} - 学习笔记</title>
+        <style>
+            body {{
+                font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+            }}
+            .container {{
+                background-color: #f9f9f9;
+                border-radius: 8px;
+                padding: 25px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 25px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #e0e0e0;
+            }}
+            .footer {{
+                font-size: 12px;
+                color: #888;
+                text-align: center;
+                margin-top: 30px;
+                padding-top: 15px;
+                border-top: 1px solid #e0e0e0;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }}
+            th, td {{
+                padding: 10px;
+                border: 1px solid #ddd;
+                text-align: left;
+            }}
+            th {{
+                background-color: #f0f0f0;
+            }}
+            .important {{
+                color: #d32f2f;
+                font-weight: bold;
+            }}
+            .highlight {{
+                background-color: #fff9c4;
+                padding: 2px 4px;
+                border-radius: 3px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            {html_notes}
+            
+            <div class="footer">
+                此邮件由AI自动生成，内容仅供参考学习使用。<br>
+                如需了解更多详情，请查看完整新闻内容。
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # 同时添加纯文本版本作为备用
+    text_content = f"""
+    {title} - 学习笔记
     
     {summary}
     
@@ -214,17 +333,25 @@ def send_email(title, summary):
     此邮件由自动化系统发送，请勿回复。
     """
     
-    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+    # 添加纯文本和HTML两个部分
+    part1 = MIMEText(text_content, 'plain', 'utf-8')
+    part2 = MIMEText(html_content, 'html', 'utf-8')
+    
+    msg.attach(part1)
+    msg.attach(part2)  # HTML版本会被大多数邮件客户端优先显示
+    
+    smtp_server = os.environ.get("SMTP_SERVER", "smtp.mailersend.net")
+    smtp_port = int(os.environ.get("SMTP_PORT", 587))
     
     try:
-        logger.info(f"正在发送邮件到: {RECIPIENT_EMAIL}")
-        # 根据您的邮件服务商调整SMTP设置
-        server = smtplib.SMTP('smtp.mailersend.net', 587)  # 以Gmail为例
+        logger.info(f"正在发送HTML邮件到: {RECIPIENT_EMAIL}")
+        server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         text = msg.as_string()
         server.sendmail(EMAIL_ADDRESS, RECIPIENT_EMAIL, text)
         server.quit()
+        logger.info("HTML邮件发送成功")
         return True
     except Exception as e:
         logger.error(f"发送邮件失败: {str(e)}")
@@ -268,7 +395,7 @@ def main():
             logger.warning("保存到Notion失败")
         
         # 发送邮件
-        email_sent = send_email(title, summary)
+        email_sent = send_email(title, summary, content)
         if email_sent:
             logger.info("成功发送邮件")
         else:
