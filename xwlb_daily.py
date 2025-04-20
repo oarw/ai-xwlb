@@ -59,7 +59,7 @@ def read_webpage_with_jina(url):
     }
     
     try:
-        logger.info(f"正在使用Jina AI读取网页内容: {url}")
+        logger.info(f"正在使用Jina AI读取网页内容")
         response = requests.post("https://r.jina.ai/", headers=headers, json=payload)
         response.raise_for_status()
         return response.json()
@@ -374,7 +374,7 @@ def main():
         
         # 获取昨天的新闻联播URL
         url, title = get_yesterday_url()
-        logger.info(f"获取URL: {url}")
+        logger.info(f"获取URL中")
         
         # 使用Jina AI读取网页内容
         result = read_webpage_with_jina(url)
