@@ -102,7 +102,7 @@ def summarize_with_gemini(content):
     """
     
     try:
-        logger.info("正在使用Google Gemini总结内容")
+        logger.info("正在总结内容")
         # 配置Gemini API
         genai.configure(api_key=GEMINI_API_KEY)
         # 创建模型
