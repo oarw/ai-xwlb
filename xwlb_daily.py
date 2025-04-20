@@ -149,7 +149,7 @@ def generate_html_notes(content, title):
     7. 对于考公，说明对申论的用法，比如：用来融入申论写作，提供素材等等，请提供详细示例
     8.补充第七条，在下方模仿高分试卷答案写一段申论片段，并说明如何使用今天的新闻
     9.如何简单的记忆需要用到的新闻素材
-    10.必须在内容中加入图表来帮助理解和记忆：
+    10.必须在内容中加入图表总结当天的主要新闻内容来帮助理解和记忆：
     - 使用 HTML <img> 标签嵌入直观的流程图或思维导图
     - 图表应该使用 QuickChart Graphviz API 链接生成
     - 图表URL格式应为：https://quickchart.io/graphviz?graph=digraph{{...}}
@@ -190,20 +190,7 @@ def generate_html_notes(content, title):
 
 ---
 
-### **高频错误自查表**
-graphviz
-digraph {
-  // ✅正确示例
-  jms[label="詹姆斯·西蒙斯"];  // 🚀ASCII节点名+中文label
-  nodeA[shape=box,label="收益率%28年化%29"];  // 🚀括号%28%29+百分号%25
-  subgraph cluster1{label="第一部分";};  // 🚀子图闭合带分号
-  
-  // ❌错误示例
-  危险节点[label="Python(科学)"];           // 💥括号未编码
-  错误基金[label="年化66%"];               // 💥百分号未转义%25
-  中文节点名[shape=box];                  // 💥非ASCII节点名
-  subgraph cluster2{label="错误子图"}      // 💥缺少闭合分号
-}
+
 
     - 示例：<img src="https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label=%22政策要点%22];impact[shape=ellipse,label=%22社会影响%22];start->impact[label=%22导致%22];}}" alt="政策流程图">
     
