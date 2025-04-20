@@ -161,6 +161,20 @@ def generate_html_notes(content, title):
       3. 使用适当的图表布局（如rankdir=LR或TB）增强可读性
       4. 使用不同形状和颜色区分不同类型的信息
     - 示例：<img src="https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label=%22政策要点%22];impact[shape=ellipse,label=%22社会影响%22];start->impact[label=%22导致%22];}}" alt="政策流程图">
+    
+    为了增强邮件的视觉吸引力和内容理解，请在适当位置添加相关的AI生成图片：
+    - 在每个主要新闻点或重要概念处添加一个相关的图片
+    - 使用Pollinations AI图片生成API
+    - 图片URL格式为：https://image.pollinations.ai/prompt/{prompt}?width=1024&height=1024&seed=100&model=flux&nologo=true
+    - {prompt}部分需要替换为英文描述的图片内容（需URL编码）
+    - 图片描述应该生动具体，包含以下要素：
+      1. 与新闻内容直接相关的场景、人物或概念
+      2. 适当的视觉风格（如新闻风格、信息图表风格等）
+      3. 清晰的构图和主题
+      4. 恰当的色彩方案（尤其是对于不同政策领域使用不同的代表色）
+    - 示例：<img src="https://image.pollinations.ai/prompt/Professional%20news%20broadcast%20studio%20with%20economic%20data%20charts%20and%20government%20policy%20documents%20displayed%20on%20screens%2C%20serious%20news%20anchor%20explaining%20economic%20policies%2C%20clean%20lighting%2C%20high%20quality" alt="新闻政策解读场景" width="500">
+    
+    请确保图片内容健康、专业、符合新闻报道的严肃性，避免政治敏感或不适当的内容。每个主要部分放置1-2张相关图片即可，不要过多。
 
     使用适当的HTML标签和CSS样式使内容美观易读，包括但不限于：
     - 使用不同颜色标注不同重要程度的内容
@@ -170,7 +184,6 @@ def generate_html_notes(content, title):
     - 可以适当添加一些帮助记忆的交互元素（如果HTML邮件支持的话）
     - 可以添加抽认卡（或称闪卡，anki记忆卡）的形式来帮助记忆，正面是问题，点击反面是答案
     
-    注意：你的返回内容，只需要严格包含html语法内容，不需要有其他解释之类的东西，并且要确保生成的HTML格式能在邮件客户端中正常显示。
     新闻内容:
     {content}
     """
@@ -220,9 +233,9 @@ def save_to_notion(title, content, summary):
     date_property_name = None
     
     for name, prop in db_properties.items():
-        if prop['type'] == 'title':
+        if (prop['type'] == 'title'):
             title_property_name = name
-        elif prop['type'] == 'date':
+        elif (prop['type'] == 'date'):
             date_property_name = name
     
     if not title_property_name or not date_property_name:
