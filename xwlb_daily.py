@@ -419,7 +419,7 @@ def main():
         # 保存到Notion
         page_id = save_to_notion(title, content, summary)
         if page_id:
-            logger.info(f"成功保存到Notion，页面ID: {page_id}")
+            logger.info(f"成功保存到Notion！")
         else:
             logger.warning("保存到Notion失败")
         
