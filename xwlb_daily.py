@@ -151,17 +151,26 @@ def generate_html_notes(content, title):
     9.如何简单的记忆需要用到的新闻素材
     10. 可以添加记忆卡片
 
-
+    适当地在内容中加入图表来帮助理解和记忆：
+    - 使用 HTML <img> 标签嵌入直观的流程图或思维导图
+    - 图表应该使用 QuickChart Graphviz API 链接生成
+    - 图表URL格式应为：https://quickchart.io/graphviz?graph=digraph{{...}}
+    - 在设计图表时注意以下要点：
+      1. 节点名使用ASCII字符，通过label属性设置中文显示
+      2. 所有特殊符号需要URL编码（空格用%20，括号用%28%29，百分号用%25等）
+      3. 使用适当的图表布局（如rankdir=LR或TB）增强可读性
+      4. 使用不同形状和颜色区分不同类型的信息
+    - 示例：<img src="https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label=%22政策要点%22];impact[shape=ellipse,label=%22社会影响%22];start->impact[label=%22导致%22];}}" alt="政策流程图">
 
     使用适当的HTML标签和CSS样式使内容美观易读，包括但不限于：
     - 使用不同颜色标注不同重要程度的内容
     - 使用合理的字体大小和间距
     - 添加适当的分割线或其他视觉元素
     - 适当添加图片等等
-    - 可以适当添加一些帮助记忆的动画
+    - 可以适当添加一些帮助记忆的交互元素（如果HTML邮件支持的话）
     - 可以添加抽认卡（或称闪卡，anki记忆卡）的形式来帮助记忆
     
-    注意：你的返回内容，只需要严格包含html语法内容，不需要有其他解释之类的东西
+    注意：你的返回内容，只需要严格包含html语法内容，不需要有其他解释之类的东西，并且要确保生成的HTML格式能在邮件客户端中正常显示。
     新闻内容:
     {content}
     """
