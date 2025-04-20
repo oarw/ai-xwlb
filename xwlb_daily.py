@@ -148,7 +148,7 @@ def generate_html_notes(content, title):
     """
     
     try:
-        logger.info("正在使用Google Gemini生成HTML笔记")
+        logger.info("正在生成笔记")
         # 配置Gemini API
         genai.configure(api_key=GEMINI_API_KEY)
         # 创建模型
