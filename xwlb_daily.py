@@ -150,7 +150,7 @@ def get_notion_database_properties():
     try:
         notion = Client(auth=NOTION_API_KEY)
         database = notion.databases.retrieve(database_id=NOTION_DATABASE_ID)
-        logger.info(f"Notion数据库属性: {database['properties'].keys()}")
+        logger.info(f"已获取Notion数据库属性")
         return database['properties']
     except Exception as e:
         logger.error(f"获取Notion数据库属性失败: {str(e)}")
