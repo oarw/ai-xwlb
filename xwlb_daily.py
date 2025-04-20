@@ -262,7 +262,7 @@ def save_to_notion(title, content, summary):
     }
     
     try:
-        logger.info(f"正在保存到Notion: {title}")
+        logger.info(f"正在保存到Notion")
         page = notion.pages.create(
             parent={"database_id": NOTION_DATABASE_ID},
             properties=properties,
