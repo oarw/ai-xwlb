@@ -185,7 +185,20 @@ def generate_html_notes(content, title):
 **输出格式**（严格遵循）：  
 ![流程图](https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];}})  
 [点击跳转或右键复制链接](https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];}})
-
+### **高频错误自查表**
+```graphviz
+digraph {{
+  // ✅正确示例
+  jms[label="詹姆斯·西蒙斯"];  // 🚀ASCII节点名+中文label
+  nodeA[shape=box,label="收益率%28年化%29"];  // 🚀括号%28%29+百分号%25
+  subgraph cluster1{label="第一部分";};  // 🚀子图闭合带分号
+  
+  // ❌错误示例
+  危险节点[label="Python(科学)"];           // 💥括号未编码
+  错误基金[label="年化66%"];               // 💥百分号未转义%25
+  中文节点名[shape=box];                  // 💥非ASCII节点名
+  subgraph cluster2{label="错误子图"}      // 💥缺少闭合分号
+}}
 ---
 
 
