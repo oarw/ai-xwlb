@@ -116,7 +116,7 @@ def generate_html_notes(content, title):
     - 使用合理的字体大小和间距
     - 添加适当的分割线或其他视觉元素
     
-    
+    注意：你的返回内容，只需要严格包含html语法内容，不需要有其他解释之类的东西
     新闻内容:
     {content}
     """
