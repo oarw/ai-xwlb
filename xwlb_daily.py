@@ -172,7 +172,6 @@ def generate_html_notes(content, title):
    - 百分号 `%` → `%25` 🚀  
 
 **错误预防**  
-```markdown
 1. 箭头仅用`->`（禁用→或-%3E等错误格式）  
 2. 中文标签必须显式声明：`label="用户登录"`  
 3. 节点定义与连线分开书写，禁止合并写法  
@@ -181,12 +180,11 @@ def generate_html_notes(content, title):
 6. 中文标签禁用空格（用%20或下划线替代空格）  
 7. 同名节点禁止多父级（需创建副本节点）  
 8. 节点名仅限ASCII字符（用label显示中文）🚀  
-9. 子图闭合必须加分号：`subgraph cluster1{...};` 🚀  
-```
+9. 子图闭合必须加分号：`subgraph cluster1{{...}};` 🚀  
 
 **输出格式**（严格遵循）：  
-![流程图](https://quickchart.io/graphviz?graph=digraph(rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];))  
-[点击跳转或右键复制链接](https://quickchart.io/graphviz?graph=digraph{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];})
+![流程图](https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];}})  
+[点击跳转或右键复制链接](https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];}})
 
 ---
 
@@ -197,8 +195,8 @@ def generate_html_notes(content, title):
     为了增强邮件的视觉吸引力和内容理解，请在适当位置添加相关的AI生成图片：
     - 在每个主要新闻点或重要概念处添加一个相关的图片
     - 使用Pollinations AI图片生成API
-    - 图片URL格式为：https://image.pollinations.ai/prompt/(prompt)?width=1024&height=1024&seed=100&model=flux&nologo=true
-    - (prompt)部分需要替换为英文描述的图片内容（需URL编码）
+    - 图片URL格式为：https://image.pollinations.ai/prompt/{{prompt}}?width=1024&height=1024&seed=100&model=flux&nologo=true
+    - {{prompt}}部分需要替换为英文描述的图片内容（需URL编码）
     - 图片描述应该生动具体，包含以下要素：
       1. 与新闻内容直接相关的场景、人物或概念
       2. 适当的视觉风格（如新闻风格、信息图表风格等）
