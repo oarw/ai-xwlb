@@ -151,7 +151,7 @@ def generate_html_notes(content, title):
     9.如何简单的记忆需要用到的新闻素材
     10. 可以添加记忆卡片
 
-    适当地在内容中加入图表来帮助理解和记忆：
+    必须在内容中加入图表来帮助理解和记忆：
     - 使用 HTML <img> 标签嵌入直观的流程图或思维导图
     - 图表应该使用 QuickChart Graphviz API 链接生成
     - 图表URL格式应为：https://quickchart.io/graphviz?graph=digraph{{...}}
