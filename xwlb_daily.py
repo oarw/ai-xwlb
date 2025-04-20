@@ -39,6 +39,11 @@ logger = logging.getLogger(__name__)
 # 添加隐私过滤器
 logger.addFilter(PrivacyFilter())
 
+# 设置notion_client库的日志级别或禁用它的日志
+notion_logger = logging.getLogger('notion_client')
+notion_logger.setLevel(logging.WARNING)  # 或者logging.ERROR来减少输出
+notion_logger.addFilter(PrivacyFilter())  # 也对notion_client的日志应用过滤器
+
 # 免费获取您的 Jina AI API 密钥：https://jina.ai/?sui=apikey
 JINA_API_KEY = os.environ.get("JINA_API_KEY")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
