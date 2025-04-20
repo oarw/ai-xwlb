@@ -373,7 +373,7 @@ def send_email(title, summary, content=None):
     smtp_port = int(os.environ.get("SMTP_PORT", 587))
     
     try:
-        logger.info(f"正在发送HTML邮件到: {RECIPIENT_EMAIL}")
+        logger.info(f"正在发送邮件....")
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
