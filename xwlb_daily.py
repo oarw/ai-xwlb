@@ -136,6 +136,7 @@ def summarize_with_gemini(content):
 def generate_html_notes(content, title):
     """使用Google Gemini API生成HTML格式的笔记"""
     prompt = f"""
+    **注意：你的返回内容，只需要严格包含html语法内容，需要严格按照html标签语法，不要在html里出现markdown语法形式，更不需要有其他解释之类的东西**
     请将以下新闻联播内容转换为学习笔记形式，重点关注与考研和考公考试相关的内容。
 
     请生成HTML格式的笔记，包含以下部分：
