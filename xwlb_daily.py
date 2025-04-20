@@ -149,17 +149,62 @@ def generate_html_notes(content, title):
     7. 对于考公，说明对申论的用法，比如：用来融入申论写作，提供素材等等，请提供详细示例
     8.补充第七条，在下方模仿高分试卷答案写一段申论片段，并说明如何使用今天的新闻
     9.如何简单的记忆需要用到的新闻素材
-    10. 可以添加记忆卡片
-
-    必须在内容中加入图表来帮助理解和记忆：
+    10.必须在内容中加入图表来帮助理解和记忆：
     - 使用 HTML <img> 标签嵌入直观的流程图或思维导图
     - 图表应该使用 QuickChart Graphviz API 链接生成
     - 图表URL格式应为：https://quickchart.io/graphviz?graph=digraph{{...}}
     - 在设计图表时注意以下要点：
-      1. 节点名使用ASCII字符，通过label属性设置中文显示
-      2. 所有特殊符号需要URL编码（空格用%20，括号用%28%29，百分号用%25等）
-      3. 使用适当的图表布局（如rankdir=LR或TB）增强可读性
-      4. 使用不同形状和颜色区分不同类型的信息
+      遵守以下规则：
+
+**代码规范**  
+1. 属性必须用逗号分隔：`[shape=record, label="数据流"]`  
+2. 每个语句单独成行且分号结尾（含子图闭合）🚀  
+3. 中文标签不需要空格的地方不要空格  
+4. 图表外可以用文字补充回答  
+
+**URL编码**  
+1. 空格转%20，保留英文双引号  
+2. URL必须是单行（无换行符）  
+3. 特殊符号强制编码：  
+   - 加号 `+` → `%2B`  
+   - 括号 `()` → `%28%29`  
+   - 尖括号 `<>` → `%3C%3E`  
+   - 百分号 `%` → `%25` 🚀  
+
+**错误预防**  
+```markdown
+1. 箭头仅用`->`（禁用→或-%3E等错误格式）  
+2. 中文标签必须显式声明：`label="用户登录"`  
+3. 节点定义与连线分开书写，禁止合并写法  
+4. 每个语句必须分号结尾（含最后一行）💥分号必须在语句末尾而非属性内  
+5. 禁止匿名节点（必须显式命名）  
+6. 中文标签禁用空格（用%20或下划线替代空格）  
+7. 同名节点禁止多父级（需创建副本节点）  
+8. 节点名仅限ASCII字符（用label显示中文）🚀  
+9. 子图闭合必须加分号：`subgraph cluster1{...};` 🚀  
+```
+
+**输出格式**（严格遵循）：  
+![流程图](https://quickchart.io/graphviz?graph=digraph{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];})  
+[点击跳转或右键复制链接](https://quickchart.io/graphviz?graph=digraph{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];})
+
+---
+
+### **高频错误自查表**
+graphviz
+digraph {
+  // ✅正确示例
+  jms[label="詹姆斯·西蒙斯"];  // 🚀ASCII节点名+中文label
+  nodeA[shape=box,label="收益率%28年化%29"];  // 🚀括号%28%29+百分号%25
+  subgraph cluster1{label="第一部分";};  // 🚀子图闭合带分号
+  
+  // ❌错误示例
+  危险节点[label="Python(科学)"];           // 💥括号未编码
+  错误基金[label="年化66%"];               // 💥百分号未转义%25
+  中文节点名[shape=box];                  // 💥非ASCII节点名
+  subgraph cluster2{label="错误子图"}      // 💥缺少闭合分号
+}
+
     - 示例：<img src="https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label=%22政策要点%22];impact[shape=ellipse,label=%22社会影响%22];start->impact[label=%22导致%22];}}" alt="政策流程图">
     
     为了增强邮件的视觉吸引力和内容理解，请在适当位置添加相关的AI生成图片：
