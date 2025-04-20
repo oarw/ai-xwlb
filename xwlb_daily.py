@@ -16,9 +16,28 @@ import google.generativeai as genai
 # 加载环境变量
 load_dotenv()
 
+# 创建自定义日志过滤器
+class PrivacyFilter(logging.Filter):
+    def filter(self, record):
+        # 检查并修改日志消息中的敏感信息
+        if hasattr(record, 'msg') and isinstance(record.msg, str):
+            # 替换Notion API URL
+            if 'api.notion.com' in record.msg:
+                if 'GET https://api.notion.com' in record.msg:
+                    record.msg = record.msg.replace('GET https://api.notion.com/v1/databases/***', 'GET notion')
+                elif 'POST https://api.notion.com' in record.msg:
+                    record.msg = record.msg.replace('POST https://api.notion.com/v1/pages', 'POST notion')
+                else:
+                    # 对其他Notion API调用的通用处理
+                    record.msg = record.msg.replace('https://api.notion.com/v1/', 'notion/')
+        return True
+
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# 添加隐私过滤器
+logger.addFilter(PrivacyFilter())
 
 # 免费获取您的 Jina AI API 密钥：https://jina.ai/?sui=apikey
 JINA_API_KEY = os.environ.get("JINA_API_KEY")
