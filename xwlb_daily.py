@@ -344,7 +344,8 @@ def save_to_notion(title, content, summary):
 def send_email(title, summary, content=None):
     """发送HTML格式的笔记摘要邮件"""
     msg = MIMEMultipart('alternative')
-    msg['From'] = EMAIL_ADDRESS
+    # 使用固定的发件人地址，解决SMTP拒绝问题
+    msg['From'] = "EMAIL_SENDER_PLACEHOLDER"
     msg['To'] = RECIPIENT_EMAIL
     msg['Subject'] = f"【新闻联播学习笔记】{title}"
     
@@ -449,9 +450,11 @@ def send_email(title, summary, content=None):
         logger.info(f"正在发送邮件....")
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
+        # 登录时仍使用环境变量中的凭据
         server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         text = msg.as_string()
-        server.sendmail(EMAIL_ADDRESS, RECIPIENT_EMAIL, text)
+        # 发送时使用msg中设置的发件人地址
+        server.sendmail("EMAIL_SENDER_PLACEHOLDER", RECIPIENT_EMAIL, text)
         server.quit()
         logger.info("HTML邮件发送成功")
         return True
