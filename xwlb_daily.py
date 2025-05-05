@@ -64,6 +64,8 @@ NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID")
 EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL")
+# 添加发件人邮箱环境变量，默认为EMAIL_SENDER_PLACEHOLDER
+EMAIL_SENDER = os.environ.get("EMAIL_SENDER")
 
 def get_yesterday_url():
     """获取前一天的新闻联播URL"""
@@ -344,8 +346,8 @@ def save_to_notion(title, content, summary):
 def send_email(title, summary, content=None):
     """发送HTML格式的笔记摘要邮件"""
     msg = MIMEMultipart('alternative')
-    # 使用固定的发件人地址，解决SMTP拒绝问题
-    msg['From'] = "EMAIL_SENDER_PLACEHOLDER"
+    # 使用环境变量中的发件人地址，而不是硬编码
+    msg['From'] = EMAIL_SENDER
     msg['To'] = RECIPIENT_EMAIL
     msg['Subject'] = f"【新闻联播学习笔记】{title}"
     
@@ -453,8 +455,8 @@ def send_email(title, summary, content=None):
         # 登录时仍使用环境变量中的凭据
         server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         text = msg.as_string()
-        # 发送时使用msg中设置的发件人地址
-        server.sendmail("EMAIL_SENDER_PLACEHOLDER", RECIPIENT_EMAIL, text)
+        # 发送时使用环境变量中的发件人地址
+        server.sendmail(EMAIL_SENDER, RECIPIENT_EMAIL, text)
         server.quit()
         logger.info("HTML邮件发送成功")
         return True
