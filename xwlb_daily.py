@@ -64,7 +64,7 @@ NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID")
 EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL")
-# 添加发件人邮箱环境变量，默认为EMAIL_SENDER_PLACEHOLDER
+# 添加发件人邮箱环境变量
 EMAIL_SENDER = os.environ.get("EMAIL_SENDER")
 
 def get_yesterday_url():
