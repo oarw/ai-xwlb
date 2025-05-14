@@ -126,7 +126,7 @@ def summarize_with_gemini(content):
         genai.configure(api_key=GEMINI_API_KEY)
         # 创建模型
         # model = genai.GenerativeModel('gemini-2.0-flash')
-        model = genai.GenerativeModel('gemini-2.5-pro-exp-03-25')
+        model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17-thinking')
         # 生成回复
         response = model.generate_content(prompt)
         # 返回文本内容
