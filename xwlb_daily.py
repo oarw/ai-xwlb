@@ -324,7 +324,7 @@ def summarize_with_gemini(content):
         # 创建模型
         # model = genai.GenerativeModel('gemini-2.0-flash')
         # model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
         # 生成回复
         response = model.generate_content(prompt)
         # 返回文本内容
