@@ -67,6 +67,138 @@ RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL")
 # 添加发件人邮箱环境变量
 EMAIL_SENDER = os.environ.get("EMAIL_SENDER")
 
+def send_error_notification(error_type, error_message, api_name):
+    """发送API错误通知邮件"""
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_SENDER
+    msg['To'] = RECIPIENT_EMAIL
+    msg['Subject'] = f"⚠️ 【API错误通知】{api_name} API异常"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>API错误通知</title>
+        <style>
+            body {{
+                font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+            }}
+            .container {{
+                background-color: #fff5f5;
+                border: 2px solid #f56565;
+                border-radius: 8px;
+                padding: 25px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 25px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #f56565;
+            }}
+            .error-title {{
+                color: #e53e3e;
+                font-size: 24px;
+                font-weight: bold;
+                margin: 0;
+            }}
+            .error-info {{
+                background-color: #fed7d7;
+                padding: 15px;
+                border-radius: 5px;
+                margin: 20px 0;
+            }}
+            .timestamp {{
+                font-size: 14px;
+                color: #666;
+                text-align: center;
+                margin-top: 20px;
+            }}
+            .suggestion {{
+                background-color: #e6fffa;
+                border-left: 4px solid #38b2ac;
+                padding: 15px;
+                margin: 20px 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1 class="error-title">🚨 API 服务异常通知</h1>
+            </div>
+            
+            <div class="error-info">
+                <h3>错误详情：</h3>
+                <p><strong>API服务：</strong>{api_name}</p>
+                <p><strong>错误类型：</strong>{error_type}</p>
+                <p><strong>错误信息：</strong>{error_message}</p>
+            </div>
+            
+            <div class="suggestion">
+                <h3>🔧 建议处理方案：</h3>
+                <ul>
+                    <li><strong>API Key失效：</strong>请检查并更新环境变量中的API密钥</li>
+                    <li><strong>账户被暂停：</strong>请联系API服务商客服处理</li>
+                    <li><strong>配额用尽：</strong>请检查API使用量并考虑升级套餐</li>
+                    <li><strong>网络问题：</strong>请检查网络连接状态</li>
+                </ul>
+            </div>
+            
+            <div class="timestamp">
+                报告时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    text_content = f"""
+    API服务异常通知
+    
+    API服务：{api_name}
+    错误类型：{error_type}
+    错误信息：{error_message}
+    
+    建议处理方案：
+    1. 检查API密钥是否有效
+    2. 检查账户状态
+    3. 检查API使用配额
+    4. 检查网络连接
+    
+    报告时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    """
+    
+    part1 = MIMEText(text_content, 'plain', 'utf-8')
+    part2 = MIMEText(html_content, 'html', 'utf-8')
+    
+    msg.attach(part1)
+    msg.attach(part2)
+    
+    smtp_server = os.environ.get("SMTP_SERVER", "smtp.mailersend.net")
+    smtp_port = int(os.environ.get("SMTP_PORT", 587))
+    
+    try:
+        logger.info(f"正在发送{api_name} API错误通知邮件...")
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        text = msg.as_string()
+        server.sendmail(EMAIL_SENDER, RECIPIENT_EMAIL, text)
+        server.quit()
+        logger.info(f"{api_name} API错误通知邮件发送成功")
+        return True
+    except Exception as e:
+        logger.error(f"发送{api_name} API错误通知邮件失败: {str(e)}")
+        return False
+
 def get_yesterday_url():
     """获取前一天的新闻联播URL"""
     yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
@@ -100,9 +232,40 @@ def read_webpage_with_jina(url):
         logger.info(f"正在使用Jina AI读取网页内容")
         response = requests.post("https://r.jina.ai/", headers=headers, json=payload)
         response.raise_for_status()
-        return response.json()
+        
+        result = response.json()
+        
+        # 检查Jina AI返回的结果是否成功
+        if "data" not in result or "content" not in result.get("data", {}):
+            error_msg = f"Jina AI返回格式异常：{result}"
+            logger.error(error_msg)
+            send_error_notification("响应格式异常", error_msg, "Jina AI")
+            raise Exception(error_msg)
+        
+        return result
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            error_msg = "Jina AI API密钥无效或已过期"
+            logger.error(error_msg)
+            send_error_notification("API密钥失效", f"HTTP 401: {str(e)}", "Jina AI")
+        elif e.response.status_code == 403:
+            error_msg = "Jina AI API访问被拒绝，可能账户被暂停"
+            logger.error(error_msg)
+            send_error_notification("访问被拒绝", f"HTTP 403: {str(e)}", "Jina AI")
+        elif e.response.status_code == 429:
+            error_msg = "Jina AI API请求频率超限"
+            logger.error(error_msg)
+            send_error_notification("请求频率超限", f"HTTP 429: {str(e)}", "Jina AI")
+        else:
+            error_msg = f"Jina AI API请求失败: {str(e)}"
+            logger.error(error_msg)
+            send_error_notification("API请求失败", str(e), "Jina AI")
+        raise
     except Exception as e:
-        logger.error(f"读取网页内容失败: {str(e)}")
+        error_msg = f"读取网页内容失败: {str(e)}"
+        logger.error(error_msg)
+        if "API" in str(e) or "auth" in str(e).lower() or "key" in str(e).lower():
+            send_error_notification("未知API错误", str(e), "Jina AI")
         raise
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
@@ -126,13 +289,27 @@ def summarize_with_gemini(content):
         genai.configure(api_key=GEMINI_API_KEY)
         # 创建模型
         # model = genai.GenerativeModel('gemini-2.0-flash')
-        model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17-thinking')
+        model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
         # 生成回复
         response = model.generate_content(prompt)
         # 返回文本内容
         return response.text
     except Exception as e:
-        logger.error(f"生成摘要失败: {str(e)}")
+        error_str = str(e)
+        logger.error(f"生成摘要失败: {error_str}")
+        
+        # 检查不同类型的Gemini API错误
+        if "403" in error_str and "CONSUMER_SUSPENDED" in error_str:
+            send_error_notification("账户被暂停", "API消费者账户已被暂停", "Gemini AI")
+        elif "403" in error_str and "Permission denied" in error_str:
+            send_error_notification("权限被拒绝", error_str, "Gemini AI")
+        elif "401" in error_str or "Invalid API key" in error_str:
+            send_error_notification("API密钥无效", error_str, "Gemini AI")
+        elif "429" in error_str or "quota" in error_str.lower():
+            send_error_notification("配额超限", error_str, "Gemini AI")
+        elif "UNAVAILABLE" in error_str:
+            send_error_notification("服务不可用", error_str, "Gemini AI")
+        
         raise
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
@@ -227,18 +404,36 @@ digraph {{
         # 配置Gemini API
         genai.configure(api_key=GEMINI_API_KEY)
         # 创建模型
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
         # 生成回复
         response = model.generate_content(prompt)
         # 返回文本内容
         return response.text
     except Exception as e:
-        logger.error(f"生成HTML笔记失败: {str(e)}")
+        error_str = str(e)
+        logger.error(f"生成HTML笔记失败: {error_str}")
+        
+        # 检查不同类型的Gemini API错误
+        if "403" in error_str and "CONSUMER_SUSPENDED" in error_str:
+            send_error_notification("账户被暂停", "API消费者账户已被暂停", "Gemini AI")
+        elif "403" in error_str and "Permission denied" in error_str:
+            send_error_notification("权限被拒绝", error_str, "Gemini AI")
+        elif "401" in error_str or "Invalid API key" in error_str:
+            send_error_notification("API密钥无效", error_str, "Gemini AI")
+        elif "429" in error_str or "quota" in error_str.lower():
+            send_error_notification("配额超限", error_str, "Gemini AI")
+        elif "UNAVAILABLE" in error_str:
+            send_error_notification("服务不可用", error_str, "Gemini AI")
+        
         # 如果失败，返回简单的HTML格式
         return f"""
         <h1>{title}</h1>
-        <p>抱歉，无法生成结构化笔记，请查看以下摘要：</p>
-        <pre>{content[:500]}...</pre>
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="color: #856404;">⚠️ 笔记生成失败</h3>
+            <p>由于API错误，无法生成结构化笔记。错误信息：{error_str}</p>
+            <p>请查看以下原始摘要内容：</p>
+        </div>
+        <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; white-space: pre-wrap;">{content[:500]}...</pre>
         """
 
 def get_notion_database_properties():
@@ -510,6 +705,11 @@ def main():
             
     except Exception as e:
         logger.error(f"处理过程中发生错误: {str(e)}")
+        
+        # 发送总体错误通知
+        error_msg = f"新闻联播程序运行失败: {str(e)}"
+        send_error_notification("程序运行错误", error_msg, "新闻联播自动化系统")
+        
     finally:
         logger.info("处理完成")
 
