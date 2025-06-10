@@ -9,7 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from notion_client import Client
 import time
 import logging
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -298,7 +298,11 @@ def read_webpage_with_jina(url):
             send_error_notification("未知API错误", str(e), "Jina AI", log_info=log_details)
         raise
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+@retry(
+    stop=stop_after_attempt(3), 
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    before_sleep=before_sleep_log(logger, logging.WARNING)
+)
 def summarize_with_gemini(content):
     """使用Google Gemini API总结内容"""
     prompt = f"""
@@ -329,10 +333,15 @@ def summarize_with_gemini(content):
         error_str = str(e)
         logger.error(f"生成摘要失败: {error_str}")
         
+        # 对于500错误或服务不可用，让重试机制处理
+        if "500" in error_str or "An internal error has occurred" in error_str or "UNAVAILABLE" in error_str:
+            logger.warning(f"Gemini API服务暂时不可用，将进行重试: {error_str}")
+            raise  # 让retry装饰器重试
+        
         # 构建详细日志信息
         log_details = f"模型: gemini-2.5-flash-preview-05-20\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\nPrompt长度: {len(prompt)} 字符\n完整错误: {traceback.format_exc()}"
         
-        # 检查不同类型的Gemini API错误
+        # 对于其他类型的错误（不会重试的错误），发送通知
         if "403" in error_str and "CONSUMER_SUSPENDED" in error_str:
             send_error_notification("账户被暂停", "API消费者账户已被暂停", "Gemini AI", log_info=log_details)
         elif "403" in error_str and "Permission denied" in error_str:
@@ -341,14 +350,16 @@ def summarize_with_gemini(content):
             send_error_notification("API密钥无效", error_str, "Gemini AI", log_info=log_details)
         elif "429" in error_str or "quota" in error_str.lower():
             send_error_notification("配额超限", error_str, "Gemini AI", log_info=log_details)
-        elif "UNAVAILABLE" in error_str:
-            send_error_notification("服务不可用", error_str, "Gemini AI", log_info=log_details)
         else:
             send_error_notification("未知错误", error_str, "Gemini AI", log_info=log_details)
         
         raise
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+@retry(
+    stop=stop_after_attempt(3), 
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    before_sleep=before_sleep_log(logger, logging.WARNING)
+)
 def generate_html_notes(content, title):
     """使用Google Gemini API生成HTML格式的笔记"""
     prompt = f"""
@@ -450,10 +461,15 @@ digraph {{
         error_str = str(e)
         logger.error(f"生成HTML笔记失败: {error_str}")
         
+        # 对于500错误或服务不可用，让重试机制处理
+        if "500" in error_str or "An internal error has occurred" in error_str or "UNAVAILABLE" in error_str:
+            logger.warning(f"Gemini API服务暂时不可用，将进行重试: {error_str}")
+            raise  # 让retry装饰器重试
+        
         # 构建详细日志信息
         log_details = f"模型: gemini-2.5-flash-preview-05-20\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\nPrompt长度: {len(prompt)} 字符\n完整错误: {traceback.format_exc()}"
         
-        # 检查不同类型的Gemini API错误
+        # 对于其他类型的错误（不会重试的错误），发送通知
         if "403" in error_str and "CONSUMER_SUSPENDED" in error_str:
             send_error_notification("账户被暂停", "API消费者账户已被暂停", "Gemini AI", log_info=log_details)
         elif "403" in error_str and "Permission denied" in error_str:
@@ -462,8 +478,6 @@ digraph {{
             send_error_notification("API密钥无效", error_str, "Gemini AI", log_info=log_details)
         elif "429" in error_str or "quota" in error_str.lower():
             send_error_notification("配额超限", error_str, "Gemini AI", log_info=log_details)
-        elif "UNAVAILABLE" in error_str:
-            send_error_notification("服务不可用", error_str, "Gemini AI", log_info=log_details)
         else:
             send_error_notification("未知错误", error_str, "Gemini AI", log_info=log_details)
         
@@ -727,9 +741,22 @@ def main():
         content = result["data"]["content"]
         logger.info(f"成功获取内容，长度: {len(content)} 字符")
         
-        # 总结内容
-        summary = summarize_with_gemini(content)
-        logger.info(f"成功生成摘要，长度: {len(summary)} 字符")
+        # 总结内容 - 添加重试失败处理
+        summary = None
+        try:
+            summary = summarize_with_gemini(content)
+            logger.info(f"成功生成摘要，长度: {len(summary)} 字符")
+        except Exception as e:
+            import traceback
+            error_str = str(e)
+            
+            # 如果是重试失败，发送最终错误通知
+            if "RetryError" in error_str or "已重试3次仍失败" in error_str:
+                log_details = f"Gemini API重试3次后仍然失败\n模型: gemini-2.5-flash-preview-05-20\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\n完整错误: {traceback.format_exc()}"
+                send_error_notification("重试失败", "Gemini API摘要生成重试3次后仍然失败", "Gemini AI", log_info=log_details)
+            
+            logger.error(f"生成摘要失败，将跳过摘要步骤: {error_str}")
+            summary = "由于Gemini API不稳定，无法生成摘要。请稍后重试。"
         
         # 保存到Notion
         page_id = save_to_notion(title, content, summary)
@@ -738,12 +765,24 @@ def main():
         else:
             logger.warning("保存到Notion失败")
         
-        # 发送邮件
-        email_sent = send_email(title, summary, content)
-        if email_sent:
-            logger.info("成功发送邮件")
-        else:
-            logger.warning("发送邮件失败")
+        # 发送邮件 - 添加重试失败处理
+        email_sent = False
+        try:
+            email_sent = send_email(title, summary, content)
+            if email_sent:
+                logger.info("成功发送邮件")
+            else:
+                logger.warning("发送邮件失败")
+        except Exception as e:
+            import traceback
+            error_str = str(e)
+            
+            # 如果邮件发送时HTML生成失败，也进行处理
+            if "生成HTML笔记失败" in error_str:
+                log_details = f"HTML笔记生成重试失败\n模型: gemini-2.5-flash-preview-05-20\n完整错误: {traceback.format_exc()}"
+                send_error_notification("HTML笔记生成失败", "邮件中的HTML笔记生成失败", "Gemini AI", log_info=log_details)
+            
+            logger.error(f"发送邮件过程中出错: {error_str}")
             
     except Exception as e:
         import traceback
