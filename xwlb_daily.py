@@ -357,7 +357,7 @@ def summarize_with_gemini(content):
         raise
 
 @retry(
-    stop=stop_after_attempt(3), 
+    stop=stop_after_attempt(5),  #重试最多三次，貌似不太够，5次吧
     wait=wait_exponential(multiplier=1, min=4, max=10),
     before_sleep=before_sleep_log(logger, logging.WARNING)
 )
