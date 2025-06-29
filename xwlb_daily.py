@@ -452,7 +452,7 @@ digraph {{
         # 配置Gemini API
         genai.configure(api_key=GEMINI_API_KEY)
         # 创建模型
-        model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
+        model = genai.GenerativeModel('gemini-2.5-pro')
         # 生成回复
         response = model.generate_content(prompt)
         # 返回文本内容
@@ -468,7 +468,7 @@ digraph {{
             raise  # 让retry装饰器重试
         
         # 构建详细日志信息
-        log_details = f"模型: gemini-2.5-flash-preview-05-20\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\nPrompt长度: {len(prompt)} 字符\n完整错误: {traceback.format_exc()}"
+        log_details = f"模型: gemini-2.5-pro\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\nPrompt长度: {len(prompt)} 字符\n完整错误: {traceback.format_exc()}"
         
         # 对于其他类型的错误（不会重试的错误），发送通知
         if "403" in error_str and "CONSUMER_SUSPENDED" in error_str:
@@ -780,7 +780,7 @@ def main():
             
             # 如果邮件发送时HTML生成失败，也进行处理
             if "生成HTML笔记失败" in error_str:
-                log_details = f"HTML笔记生成重试失败\n模型: gemini-2.5-flash-preview-05-20\n完整错误: {traceback.format_exc()}"
+                log_details = f"HTML笔记生成重试失败\n模型: gemini-2.5-pro\n完整错误: {traceback.format_exc()}"
                 send_error_notification("HTML笔记生成失败", "邮件中的HTML笔记生成失败", "Gemini AI", log_info=log_details)
             
             logger.error(f"发送邮件过程中出错: {error_str}")
