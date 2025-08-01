@@ -6,7 +6,7 @@
 
 - 自动获取前一天的新闻联播文字稿URL
 - 使用Jina AI的Reader API读取网页内容
-- 使用OpenAI API生成摘要，重点关注考研考公相关内容
+- 使用Gemini API生成摘要，重点关注考研考公相关内容
 - 将原文和摘要保存到Notion数据库
 - 通过邮件发送摘要
 
@@ -16,7 +16,7 @@
 
 ```
 JINA_API_KEY=your_jina_api_key
-OPENAI_API_KEY=your_openai_api_key
+GEMINI_API_KEY=your_gemini_api_key
 NOTION_API_KEY=your_notion_api_key
 NOTION_DATABASE_ID=your_notion_database_id
 EMAIL_ADDRESS=your_email_address
