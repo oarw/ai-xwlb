@@ -367,12 +367,12 @@ def summarize_with_gemini(content):
 )
 def generate_html_notes(content, title):
     """使用Google Gemini API生成HTML格式的笔记"""
-    prompt = f"""
+    prompt_template = """
     **注意：你的返回内容，只需要严格包含html语法内容，需要严格按照html标签语法，不要在html里出现markdown语法形式，更不需要有其他解释之类的东西**
     请将以下新闻联播内容转换为学习笔记形式，重点关注与考研和考公考试相关的内容。
 
     请生成HTML格式的笔记，包含以下部分：
-    1. 标题部分：大标题样式的"{title}"
+    1. 标题部分：大标题样式的"{TITLE}"
     2. 整体摘要部分：简洁概括新闻重点（约300字左右）
     3. 关键新闻点部分：使用编号列表呈现主要新闻内容，然后第二行是详细新闻报道
     4. 考研考公重要信息部分：使用醒目的样式标注与国家政策、经济发展、社会治理、重大事件、国际关系等相关内容
@@ -451,8 +451,10 @@ digraph {{
     - 可以在最后添加抽认卡（或称闪卡，anki记忆卡）的形式来帮助记忆本日的内容，正面是问题，点击反面是答案
     
     新闻内容:
-    {content}
+    {CONTENT}
     """
+
+    prompt = prompt_template.replace("{TITLE}", title).replace("{CONTENT}", content)
     
     try:
         logger.info("正在生成笔记")
