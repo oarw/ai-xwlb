@@ -4,6 +4,7 @@ import os
 import json
 import urllib.parse
 import smtplib
+import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from notion_client import Client
@@ -496,6 +497,88 @@ digraph {{
         <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; white-space: pre-wrap;">{content[:500]}...</pre>
         """
 
+def _encode_graphviz_graph_param(graph_text: str) -> str:
+    """将 DOT 文本规范化并进行 URL 编码，适配 QuickChart Graphviz。
+
+    规则：
+    - 移除零宽字符
+    - 将 CR/LF 统一移除为单空格，保持单行
+    - 合并成对的双花括号为单花括号（常见 LLM 误用）
+    - 全量 URL 编码（含 { } ; [ ] " ' 等），避免 HTML/URL 注入
+    """
+    if not isinstance(graph_text, str):
+        graph_text = str(graph_text)
+
+    normalized = graph_text.replace('\u200b', '')
+    normalized = normalized.replace('\r', ' ').replace('\n', ' ')
+    # 纠正常见的双花括号
+    normalized = normalized.replace('{{', '{').replace('}}', '}')
+    # 压缩多余空白
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    # 全量编码，QuickChart 会解码传入 Graphviz
+    return urllib.parse.quote(normalized, safe='')
+
+def sanitize_quickchart_graphviz_urls(html: str) -> str:
+    """清洗并规范 HTML/Markdown 中的 QuickChart Graphviz 链接。
+
+    - 将 <img src> 的 quickchart.io/graphviz?graph=... 统一为单引号包裹
+    - 强制将 graph 参数值做单行化与全量 URL 编码
+    - 兼容 Markdown 图片写法，转换为 <img src='...'>
+    """
+    if not html:
+        return html
+
+    def rebuild_url(url: str) -> str:
+        try:
+            parsed = urllib.parse.urlparse(url)
+            query_pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+            new_pairs = []
+            found = False
+            for k, v in query_pairs:
+                if k == 'graph':
+                    found = True
+                    raw = urllib.parse.unquote(v)
+                    new_pairs.append((k, _encode_graphviz_graph_param(raw)))
+                else:
+                    new_pairs.append((k, v))
+            if not found:
+                # 尝试直接抓取 graph= 后面的内容（极端情况下）
+                m = re.search(r"graph=([^&#]+)", url)
+                if m:
+                    raw = urllib.parse.unquote(m.group(1))
+                    encoded = _encode_graphviz_graph_param(raw)
+                    url = re.sub(r"graph=[^&#]+", f"graph={encoded}", url)
+                    return url
+            new_query = '&'.join([f"{k}={v}" for k, v in new_pairs])
+            return urllib.parse.urlunparse((
+                parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment
+            ))
+        except Exception:
+            return url
+
+    # 1) HTML <img src="..."> → 改为单引号并规范 graph
+    def _img_repl(match: re.Match) -> str:
+        prefix = match.group(1)  # <img ... src=
+        quote = match.group(2)
+        url = match.group(3)
+        fixed = rebuild_url(url)
+        return f"{prefix}'{fixed}'"
+
+    html = re.sub(r"(<img\s+[^>]*?src=)(['\"])((?:https?:)?//quickchart\.io/graphviz\?[^'\">\s]+)\2",
+                  _img_repl, html, flags=re.IGNORECASE)
+
+    # 2) Markdown ![alt](url) → <img src='url' alt='alt'> 并规范 graph
+    def _md_repl(match: re.Match) -> str:
+        alt = match.group(1) or ''
+        url = match.group(2)
+        fixed = rebuild_url(url)
+        alt_clean = alt.replace("'", " ")[:100]
+        return f"<img src='{fixed}' alt='{alt_clean}'>"
+
+    html = re.sub(r"!\[([^\]]*)\]\((https?://[^\s)]+)\)", _md_repl, html, flags=re.IGNORECASE)
+    return html
+
 def get_notion_database_properties():
     """获取Notion数据库的属性结构"""
     try:
@@ -606,8 +689,9 @@ def send_email(title, summary, content=None):
     msg['To'] = RECIPIENT_EMAIL
     msg['Subject'] = f"【新闻联播学习笔记】{title}"
     
-    # 先生成HTML格式笔记
+    # 先生成HTML格式笔记，并对其中的 QuickChart Graphviz 链接做规范化处理
     html_notes = generate_html_notes(content or summary, title)
+    html_notes = sanitize_quickchart_graphviz_urls(html_notes)
     
     # 添加CSS样式的基础HTML
     html_content = f"""
