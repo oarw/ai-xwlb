@@ -4,7 +4,6 @@ import os
 import json
 import urllib.parse
 import smtplib
-import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from notion_client import Client
@@ -16,9 +15,6 @@ import google.generativeai as genai
 
 # 加载环境变量
 load_dotenv()
-
-# 模块级常量
-ALT_TEXT_MAX_LEN = 100  # 限制 <img alt> 的最大长度，防止邮件客户端截断或样式异常
 
 # 创建自定义日志过滤器
 class PrivacyFilter(logging.Filter):
@@ -384,7 +380,7 @@ def generate_html_notes(content, title):
     10.必须在内容中加入图表总结当天的主要新闻内容来帮助理解和记忆：
     - 使用 HTML <img> 标签嵌入直观的流程图或思维导图
     - 图表应该使用 QuickChart Graphviz API 链接生成
-    - 图表URL格式应为：https://quickchart.io/graphviz?graph=digraph{...} （严禁双花括号）
+    - 图表URL格式应为：https://quickchart.io/graphviz?graph=digraph{{...}}
     - 在设计图表时注意以下要点：
       遵守以下规则：
 
@@ -394,50 +390,47 @@ def generate_html_notes(content, title):
 3. 中文标签不需要空格的地方不要空格  
 4. 图表外可以用文字补充回答  
 
-**URL编码与包裹规则**  
-1. URL 必须单行（严禁实际换行）；标签换行用 `\\n` 或 HTML `<BR/>`  
-2. `src` 一律使用单引号包裹：`<img src='...'>`  
-3. 必须编码：  
-   - 双引号 `"` → `%22`（若必须出现在 label 内）  
-   - 单引号 `'` → `%27`  
+**URL编码**  
+1. 空格转%20，保留英文双引号  
+2. URL必须是单行（无换行符）  
+3. 特殊符号强制编码：  
    - 加号 `+` → `%2B`  
    - 括号 `()` → `%28%29`  
    - 尖括号 `<>` → `%3C%3E`  
    - 百分号 `%` → `%25` 🚀  
-4. 仅允许 `digraph{...}` 单层花括号，禁止 `digraph{{...}}`  
 
 **错误预防**  
 1. 箭头仅用`->`（禁用→或-%3E等错误格式）  
-2. 中文标签必须显式声明：`label=\"用户登录\"`（注意引号将被编码为 `%22`）  
+2. 中文标签必须显式声明：`label="用户登录"`  
 3. 节点定义与连线分开书写，禁止合并写法  
 4. 每个语句必须分号结尾（含最后一行）💥分号必须在语句末尾而非属性内  
 5. 禁止匿名节点（必须显式命名）  
 6. 中文标签禁用空格（用%20或下划线替代空格）  
 7. 同名节点禁止多父级（需创建副本节点）  
 8. 节点名仅限ASCII字符（用label显示中文）🚀  
-9. 子图闭合必须加分号：`subgraph cluster1{...};` 🚀（严禁 `{{` / `}}`）  
+9. 子图闭合必须加分号：`subgraph cluster1{{...}};` 🚀  
 
 **输出格式**（严格遵循）：  
-<img src='https://quickchart.io/graphviz?graph=digraph{rankdir=LR;start[shape=box,label=%22开始%22];process[shape=ellipse,label=%22处理数据%22];start->process[label=%22流程启动%22];}' alt='流程图'>  
+![流程图](https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];}})  
 ### **高频错误自查表**
 ```graphviz
 digraph {{
   // ✅正确示例
   jms[label="詹姆斯·西蒙斯"];  // 🚀ASCII节点名+中文label
   nodeA[shape=box,label="收益率%28年化%29"];  // 🚀括号%28%29+百分号%25
-  subgraph cluster1{label="第一部分";};  // 🚀子图闭合带分号
+  subgraph cluster1{{label="第一部分";}};  // 🚀子图闭合带分号
   
   // ❌错误示例
   危险节点[label="Python(科学)"];           // 💥括号未编码
   错误基金[label="年化66%"];               // 💥百分号未转义%25
   中文节点名[shape=box];                  // 💥非ASCII节点名
-  subgraph cluster2{label="错误子图"}    // 💥缺少闭合分号
+  subgraph cluster2{{label="错误子图"}}    // 💥缺少闭合分号
 }}
 ---
 
 
 
-    - 示例：<img src='https://quickchart.io/graphviz?graph=digraph{rankdir=LR;start[shape=box,label=%22政策要点%22];impact[shape=ellipse,label=%22社会影响%22];start->impact[label=%22导致%22];}' alt='政策流程图'>
+    - 示例：<img src="https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label=%22政策要点%22];impact[shape=ellipse,label=%22社会影响%22];start->impact[label=%22导致%22];}}" alt="政策流程图">
     
     
     
@@ -499,88 +492,6 @@ digraph {{
         </div>
         <pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; white-space: pre-wrap;">{content[:500]}...</pre>
         """
-
-def _encode_graphviz_graph_param(graph_text: str) -> str:
-    """将 DOT 文本规范化并进行 URL 编码，适配 QuickChart Graphviz。
-
-    规则：
-    - 移除零宽字符
-    - 将 CR/LF 统一移除为单空格，保持单行
-    - 合并成对的双花括号为单花括号（常见 LLM 误用）
-    - 全量 URL 编码（含 { } ; [ ] " ' 等），避免 HTML/URL 注入
-    """
-    if not isinstance(graph_text, str):
-        graph_text = str(graph_text)
-
-    normalized = graph_text.replace('\u200b', '')
-    normalized = normalized.replace('\r', ' ').replace('\n', ' ')
-    # 纠正常见的双花括号
-    normalized = normalized.replace('{{', '{').replace('}}', '}')
-    # 压缩多余空白
-    normalized = re.sub(r"\s+", " ", normalized).strip()
-
-    # 全量编码，QuickChart 会解码传入 Graphviz
-    return urllib.parse.quote(normalized, safe='')
-
-def sanitize_quickchart_graphviz_urls(html: str) -> str:
-    """清洗并规范 HTML/Markdown 中的 QuickChart Graphviz 链接。
-
-    - 将 <img src> 的 quickchart.io/graphviz?graph=... 统一为单引号包裹
-    - 强制将 graph 参数值做单行化与全量 URL 编码
-    - 兼容 Markdown 图片写法，转换为 <img src='...'>
-    """
-    if not html:
-        return html
-
-    def rebuild_url(url: str) -> str:
-        try:
-            parsed = urllib.parse.urlparse(url)
-            query_pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
-            new_pairs = []
-            found = False
-            for k, v in query_pairs:
-                if k == 'graph':
-                    found = True
-                    raw = urllib.parse.unquote(v)
-                    new_pairs.append((k, _encode_graphviz_graph_param(raw)))
-                else:
-                    new_pairs.append((k, v))
-            if not found:
-                # 尝试直接抓取 graph= 后面的内容（极端情况下）
-                m = re.search(r"graph=([^&#]+)", url)
-                if m:
-                    raw = urllib.parse.unquote(m.group(1))
-                    encoded = _encode_graphviz_graph_param(raw)
-                    url = re.sub(r"graph=[^&#]+", f"graph={encoded}", url)
-                    return url
-            new_query = '&'.join([f"{k}={v}" for k, v in new_pairs])
-            return urllib.parse.urlunparse((
-                parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment
-            ))
-        except Exception:
-            return url
-
-    # 1) HTML <img src="..."> → 改为单引号并规范 graph
-    def _img_repl(match: re.Match) -> str:
-        prefix = match.group(1)  # <img ... src=
-        quote = match.group(2)
-        url = match.group(3)
-        fixed = rebuild_url(url)
-        return f"{prefix}'{fixed}'"
-
-    html = re.sub(r"(<img\s+[^>]*?src=)(['\"])((?:https?:)?//quickchart\.io/graphviz\?[^'\">\s]+)\2",
-                  _img_repl, html, flags=re.IGNORECASE)
-
-    # 2) Markdown ![alt](url) → <img src='url' alt='alt'> 并规范 graph
-    def _md_repl(match: re.Match) -> str:
-        alt = match.group(1) or ''
-        url = match.group(2)
-        fixed = rebuild_url(url)
-        alt_clean = alt.replace("'", " ")[:ALT_TEXT_MAX_LEN]
-        return f"<img src='{fixed}' alt='{alt_clean}'>"
-
-    html = re.sub(r"!\[([^\]]*)\]\((https?://[^\s)]+)\)", _md_repl, html, flags=re.IGNORECASE)
-    return html
 
 def get_notion_database_properties():
     """获取Notion数据库的属性结构"""
@@ -692,9 +603,8 @@ def send_email(title, summary, content=None):
     msg['To'] = RECIPIENT_EMAIL
     msg['Subject'] = f"【新闻联播学习笔记】{title}"
     
-    # 先生成HTML格式笔记，并对其中的 QuickChart Graphviz 链接做规范化处理
+    # 先生成HTML格式笔记
     html_notes = generate_html_notes(content or summary, title)
-    html_notes = sanitize_quickchart_graphviz_urls(html_notes)
     
     # 添加CSS样式的基础HTML
     html_content = f"""
