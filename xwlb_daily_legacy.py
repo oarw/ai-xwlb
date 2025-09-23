@@ -1,15 +1,3 @@
-import logging
-from app_main import main as app_main_main
-
-
-def main():
-    app_main_main()
-
-
-if __name__ == "__main__":
-    logging.getLogger(__name__).info("开始运行新闻联播摘要生成程序")
-    main()
-
 import datetime
 import requests
 import os

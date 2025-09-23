@@ -35,7 +35,30 @@ pip install -r requirements.txt
 
 3. 运行程序：
 ```
-python xwlb_daily.py
+python xwlb_daily.py  # 兼容旧入口（会转调新入口）
+```
+或直接运行新入口：
+```
+python app_main.py
+```
+
+## 模块化结构
+
+```
+.
+├─ app_main.py                # 新的主入口，编排各模块
+├─ xwlb_daily.py              # 兼容层，转调用 app_main.main()
+├─ xwlb_daily_legacy.py       # 旧版大文件（保留以便参考）
+└─ xwlb/
+   ├─ __init__.py
+   ├─ logging_setup.py        # 日志与隐私过滤
+   ├─ config.py               # 环境变量与配置
+   ├─ utils.py                # 日期与URL工具
+   ├─ jina_reader.py          # Jina Reader API 调用
+   ├─ gemini_client.py        # Gemini 总结与HTML生成
+   ├─ notion_client_ext.py    # Notion 持久化
+   ├─ notifications.py        # 错误通知邮件
+   └─ mailer.py               # 摘要邮件发送
 ```
 
 ## Notion数据库设置
