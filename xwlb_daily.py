@@ -323,8 +323,8 @@ def summarize_with_gemini(content):
         genai.configure(api_key=GEMINI_API_KEY)
         # 创建模型
         # model = genai.GenerativeModel('gemini-2.0-flash')
-        # model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
-        model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
+        # model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         # 生成回复
         response = model.generate_content(prompt)
         # 返回文本内容
@@ -340,7 +340,7 @@ def summarize_with_gemini(content):
             raise  # 让retry装饰器重试
         
         # 构建详细日志信息
-        log_details = f"模型: gemini-2.5-flash-preview-05-20\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\nPrompt长度: {len(prompt)} 字符\n完整错误: {traceback.format_exc()}"
+        log_details = f"模型: gemini-2.5-flash\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\nPrompt长度: {len(prompt)} 字符\n完整错误: {traceback.format_exc()}"
         
         # 对于其他类型的错误（不会重试的错误），发送通知
         if "403" in error_str and "CONSUMER_SUSPENDED" in error_str:
@@ -753,7 +753,7 @@ def main():
             
             # 如果是重试失败，发送最终错误通知
             if "RetryError" in error_str or "已重试3次仍失败" in error_str:
-                log_details = f"Gemini API重试3次后仍然失败\n模型: gemini-2.5-flash-preview-05-20\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\n完整错误: {traceback.format_exc()}"
+                log_details = f"Gemini API重试3次后仍然失败\n模型: gemini-2.5-flash\nAPI密钥: {GEMINI_API_KEY[:10]}...****\n内容长度: {len(content)} 字符\n完整错误: {traceback.format_exc()}"
                 send_error_notification("重试失败", "Gemini API摘要生成重试3次后仍然失败", "Gemini AI", log_info=log_details)
             
             logger.error(f"生成摘要失败，将跳过摘要步骤: {error_str}")
