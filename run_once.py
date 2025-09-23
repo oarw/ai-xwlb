@@ -1,12 +1,8 @@
 import logging
-from dotenv import load_dotenv
-from xwlb_daily import main
+from xwlb.logging_setup import setup_logging
+from app_main import main
 
-# 加载环境变量
-load_dotenv()
-
-# 设置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+setup_logging()
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
