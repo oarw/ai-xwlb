@@ -17,6 +17,9 @@ import google.generativeai as genai
 # 加载环境变量
 load_dotenv()
 
+# 模块级常量
+ALT_TEXT_MAX_LEN = 100  # 限制 <img alt> 的最大长度，防止邮件客户端截断或样式异常
+
 # 创建自定义日志过滤器
 class PrivacyFilter(logging.Filter):
     def filter(self, record):
@@ -573,7 +576,7 @@ def sanitize_quickchart_graphviz_urls(html: str) -> str:
         alt = match.group(1) or ''
         url = match.group(2)
         fixed = rebuild_url(url)
-        alt_clean = alt.replace("'", " ")[:100]
+        alt_clean = alt.replace("'", " ")[:ALT_TEXT_MAX_LEN]
         return f"<img src='{fixed}' alt='{alt_clean}'>"
 
     html = re.sub(r"!\[([^\]]*)\]\((https?://[^\s)]+)\)", _md_repl, html, flags=re.IGNORECASE)
