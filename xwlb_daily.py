@@ -380,7 +380,7 @@ def generate_html_notes(content, title):
     10.必须在内容中加入图表总结当天的主要新闻内容来帮助理解和记忆：
     - 使用 HTML <img> 标签嵌入直观的流程图或思维导图
     - 图表应该使用 QuickChart Graphviz API 链接生成
-    - 图表URL格式应为：https://quickchart.io/graphviz?graph=digraph{{...}}
+    - 图表URL格式应为：https://quickchart.io/graphviz?graph=digraph{...} （严禁双花括号）
     - 在设计图表时注意以下要点：
       遵守以下规则：
 
@@ -390,47 +390,50 @@ def generate_html_notes(content, title):
 3. 中文标签不需要空格的地方不要空格  
 4. 图表外可以用文字补充回答  
 
-**URL编码**  
-1. 空格转%20，保留英文双引号  
-2. URL必须是单行（无换行符）  
-3. 特殊符号强制编码：  
+**URL编码与包裹规则**  
+1. URL 必须单行（严禁实际换行）；标签换行用 `\\n` 或 HTML `<BR/>`  
+2. `src` 一律使用单引号包裹：`<img src='...'>`  
+3. 必须编码：  
+   - 双引号 `"` → `%22`（若必须出现在 label 内）  
+   - 单引号 `'` → `%27`  
    - 加号 `+` → `%2B`  
    - 括号 `()` → `%28%29`  
    - 尖括号 `<>` → `%3C%3E`  
    - 百分号 `%` → `%25` 🚀  
+4. 仅允许 `digraph{...}` 单层花括号，禁止 `digraph{{...}}`  
 
 **错误预防**  
 1. 箭头仅用`->`（禁用→或-%3E等错误格式）  
-2. 中文标签必须显式声明：`label="用户登录"`  
+2. 中文标签必须显式声明：`label=\"用户登录\"`（注意引号将被编码为 `%22`）  
 3. 节点定义与连线分开书写，禁止合并写法  
 4. 每个语句必须分号结尾（含最后一行）💥分号必须在语句末尾而非属性内  
 5. 禁止匿名节点（必须显式命名）  
 6. 中文标签禁用空格（用%20或下划线替代空格）  
 7. 同名节点禁止多父级（需创建副本节点）  
 8. 节点名仅限ASCII字符（用label显示中文）🚀  
-9. 子图闭合必须加分号：`subgraph cluster1{{...}};` 🚀  
+9. 子图闭合必须加分号：`subgraph cluster1{...};` 🚀（严禁 `{{` / `}}`）  
 
 **输出格式**（严格遵循）：  
-![流程图](https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label="开始"];process[shape=ellipse,label="处理数据"];start->process[label="流程启动"];}})  
+<img src='https://quickchart.io/graphviz?graph=digraph{rankdir=LR;start[shape=box,label=%22开始%22];process[shape=ellipse,label=%22处理数据%22];start->process[label=%22流程启动%22];}' alt='流程图'>  
 ### **高频错误自查表**
 ```graphviz
 digraph {{
   // ✅正确示例
   jms[label="詹姆斯·西蒙斯"];  // 🚀ASCII节点名+中文label
   nodeA[shape=box,label="收益率%28年化%29"];  // 🚀括号%28%29+百分号%25
-  subgraph cluster1{{label="第一部分";}};  // 🚀子图闭合带分号
+  subgraph cluster1{label="第一部分";};  // 🚀子图闭合带分号
   
   // ❌错误示例
   危险节点[label="Python(科学)"];           // 💥括号未编码
   错误基金[label="年化66%"];               // 💥百分号未转义%25
   中文节点名[shape=box];                  // 💥非ASCII节点名
-  subgraph cluster2{{label="错误子图"}}    // 💥缺少闭合分号
+  subgraph cluster2{label="错误子图"}    // 💥缺少闭合分号
 }}
 ---
 
 
 
-    - 示例：<img src="https://quickchart.io/graphviz?graph=digraph{{rankdir=LR;start[shape=box,label=%22政策要点%22];impact[shape=ellipse,label=%22社会影响%22];start->impact[label=%22导致%22];}}" alt="政策流程图">
+    - 示例：<img src='https://quickchart.io/graphviz?graph=digraph{rankdir=LR;start[shape=box,label=%22政策要点%22];impact[shape=ellipse,label=%22社会影响%22];start->impact[label=%22导致%22];}' alt='政策流程图'>
     
     
     
